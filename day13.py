@@ -28,35 +28,49 @@ class Grabber:
     def Solve(self):
         A = self.GetXYABMatrix()
         
-        a = A[0, 0]
-        b = A[0, 1]
-        c = A[1, 0]
-        d = A[1, 1]
+        """
+        | a b | = | ax bx |
+        | c d |   | ay by |
+        """
+        a = self.ax
+        b = self.bx
+        c = self.ay
+        d = self.by
 
-        # manually calculat determinant
+        # manually calculate determinant
         det = a*d - b*c
 
+        # no unique solutions
         if det == 0:
             return 0
         
+        # manually get inverse (python inverse did bad things)
+        # note: must enforce 64 bit ints
         inv = np.matrix([[d, -b], [-c, a]], dtype=np.int64)
         T = self.GetXYTMatrix()
 
+        # Calculate solution (but still need to divide by determinant)
         solution = inv @ T
 
+        # check that all the elements of the solution are divisible by the determinant
         solution_valid = (solution % det)
         if not (solution_valid == 0).all():
             return 0
         
+        # Do integer division (note: / will turn it into a float, we don't want that)
         solution = solution // det
 
+        # Check solution is positive
+        # must be done after determinant is applied, in case determinant is negative
         if not np.all(solution >= 0):
             return 0
         
+        # Check that we've actually solved it
         test = A @ solution
         good = test == T
-
         assert(good.all())
+
+        # Calculate the score
         costs = solution.T @ np.asarray([3, 1], dtype=np.int64)
         return (costs).sum()
 
